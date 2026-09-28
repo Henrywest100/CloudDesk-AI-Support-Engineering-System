@@ -100,8 +100,9 @@ def compute_drift(df_in):
     if len(df_in) < 20:
         return None
     df_d = df_in.copy()
-    df_d["timestamp"] = pd.to_datetime(df_d["timestamp"])
-    now = pd.Timestamp.utcnow()
+    
+    df_d["timestamp"] = pd.to_datetime(df_d["timestamp"]).dt.tz_localize(None)
+    now = pd.Timestamp.utcnow().tz_localize(None)
     this_week = df_d[df_d["timestamp"] >= now - timedelta(days=7)]
     last_week = df_d[
         (df_d["timestamp"] >= now - timedelta(days=14)) &
