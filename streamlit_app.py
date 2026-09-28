@@ -151,9 +151,9 @@ html, body, [class*="css"] {
 }
 
 /* Hide Streamlit chrome */
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
+#MainMenu {visibility: visible;}
+footer {visibility: visible;}
+header {visibility: visible;}
 </style>
 """, unsafe_allow_html=True)
 
