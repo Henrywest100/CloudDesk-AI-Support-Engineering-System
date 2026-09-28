@@ -1,6 +1,7 @@
 """Metrics Dashboard — Streamlit page."""
 import streamlit as st
 import pandas as pd
+from datetime import timedelta
 from metrics_logger import load_metrics
 
 st.set_page_config(page_title="CloudDesk Metrics", page_icon="📊", layout="wide")
@@ -23,6 +24,55 @@ c1.metric("Total Queries", len(df))
 c2.metric("Avg Confidence", f"{df['confidence'].mean()*100:.1f}%")
 c3.metric("Escalation Rate", f"{df['escalated'].mean()*100:.1f}%")
 c4.metric("Avg Latency", f"{df['latency_s'].mean():.2f}s")
+
+st.divider()
+
+# ---- Drift detection ----
+st.subheader("📉 Drift Detection")
+
+def compute_drift(df_in):
+    if len(df_in) < 20:
+        return None
+
+    df_d = df_in.copy()
+    df_d["timestamp"] = pd.to_datetime(df_d["timestamp"])
+    now = pd.Timestamp.utcnow()
+
+    this_week = df_d[df_d["timestamp"] >= now - timedelta(days=7)]
+    last_week = df_d[
+        (df_d["timestamp"] >= now - timedelta(days=14)) &
+        (df_d["timestamp"] < now - timedelta(days=7))
+    ]
+
+    if len(this_week) == 0 or len(last_week) == 0:
+        return None
+
+    return {
+        "this_week": round(this_week["confidence"].mean(), 4),
+        "last_week": round(last_week["confidence"].mean(), 4),
+        "delta": round(this_week["confidence"].mean() - last_week["confidence"].mean(), 4),
+    }
+
+drift = compute_drift(df)
+
+if drift is None:
+    st.info(
+        f"⏳ Not enough data for drift analysis "
+        f"(need 20+ queries across 2 weeks — currently {len(df)})."
+    )
+else:
+    delta_pct = drift["delta"] * 100
+    d1, d2, d3 = st.columns(3)
+    d1.metric("This Week Avg", f"{drift['this_week']*100:.1f}%")
+    d2.metric("Last Week Avg", f"{drift['last_week']*100:.1f}%")
+    d3.metric("Change", f"{delta_pct:+.1f}%")
+
+    if delta_pct < -5:
+        st.error(f"🚨 Confidence dropped {abs(delta_pct):.1f}% — possible drift.")
+    elif delta_pct < -2:
+        st.warning(f"⚠️ Slight drop of {abs(delta_pct):.1f}% — monitor.")
+    else:
+        st.success(f"✅ Stable ({delta_pct:+.1f}% week-over-week).")
 
 st.divider()
 
