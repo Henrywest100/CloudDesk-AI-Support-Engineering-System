@@ -34,3 +34,40 @@ def load_metrics():
                 except json.JSONDecodeError:
                     continue
     return records
+
+# =========================================================
+# ERROR LOGGING
+# =========================================================
+import traceback
+
+ERROR_FILE = "errors.log"
+
+def log_error(question: str, exception: Exception, context: dict = None):
+    """Log a failed query with stack trace."""
+    from datetime import datetime
+    record = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "question": question[:200],
+        "error_type": type(exception).__name__,
+        "error_message": str(exception)[:500],
+        "traceback": traceback.format_exc()[:2000],
+        "context": context or {},
+    }
+    with open(ERROR_FILE, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record) + "\n")
+
+
+def load_errors():
+    """Load all error records."""
+    if not os.path.exists(ERROR_FILE):
+        return []
+    records = []
+    with open(ERROR_FILE, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    records.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    return records

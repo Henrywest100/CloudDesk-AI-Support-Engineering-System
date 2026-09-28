@@ -7,7 +7,7 @@ import time
 import streamlit as st
 from huggingface_hub import InferenceClient
 from retrieval_pipeline import load_config, get_vector_store, run_rag_pipeline
-from metrics_logger import log_query, load_metrics
+from metrics_logger import log_query, load_metrics, log_error, load_errors
 
 # -------------------------------------------------------------
 # Page config — MUST be the first Streamlit command
@@ -247,10 +247,15 @@ with chat_col:
         # 2. Run pipeline with spinner
         with st.spinner("🔎 Searching knowledge base and generating answer…"):
             t0 = time.time()
-            res = run_rag_pipeline(CFG, VSTORE, CLIENT, question.strip())
-            elapsed = f"{time.time() - t0:.2f}s"
-
-        log_query(
+            try:
+                res = run_rag_pipeline(CFG, VSTORE, CLIENT, question.strip())
+                elapsed = f"{time.time() - t0:.2f}s"
+            except Exception as e:
+                from metrics_logger import log_error
+                log_error(question, e, context={"stage": "pipeline", "store": VSTORE[0]})
+                st.error("⚠️ Something went wrong. This query has been logged for review.")
+                st.stop()
+            log_query(
             question=question,
             confidence=res["confidence"],
             escalated=res["requires_escalation"],
@@ -334,8 +339,14 @@ with info_col:
             st.session_state.messages.append({"role": "user", "content": ex})
             with st.spinner("🔎 Searching…"):
                 t0 = time.time()
-                res = run_rag_pipeline(CFG, VSTORE, CLIENT, ex)
-                elapsed = f"{time.time() - t0:.2f}s"
+                try:
+                    res = run_rag_pipeline(CFG, VSTORE, CLIENT, ex)
+                    elapsed = f"{time.time() - t0:.2f}s"
+                except Exception as e:
+                    from metrics_logger import log_error
+                    log_error(ex, e, context={"stage": "example", "store": VSTORE[0]})
+                    st.error("⚠️ Something went wrong. This query has been logged.")
+                    st.stop()
 
             log_query(
                 question=ex,

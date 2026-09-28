@@ -51,3 +51,4 @@ __pycache__/
 .DS_Store
 Thumbs.db
 metrics_log.jsonl
+errors.log
