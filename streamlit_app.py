@@ -7,6 +7,7 @@ import time
 import streamlit as st
 from huggingface_hub import InferenceClient
 from retrieval_pipeline import load_config, get_vector_store, run_rag_pipeline
+from metrics_logger import log_query, load_metrics
 
 # -------------------------------------------------------------
 # Page config — MUST be the first Streamlit command
@@ -249,6 +250,15 @@ with chat_col:
             res = run_rag_pipeline(CFG, VSTORE, CLIENT, question.strip())
             elapsed = f"{time.time() - t0:.2f}s"
 
+        log_query(
+            question=question,
+            confidence=res["confidence"],
+            escalated=res["requires_escalation"],
+            sources_used=len(res["docs"]),
+            vector_store=VSTORE[0],
+            latency_s=float(elapsed.replace("s", "")),
+        )    
+
         # 3. Build assistant message
         conf_pct = int(res["confidence"] * 100)
         escalated = res["requires_escalation"]
@@ -326,6 +336,15 @@ with info_col:
                 t0 = time.time()
                 res = run_rag_pipeline(CFG, VSTORE, CLIENT, ex)
                 elapsed = f"{time.time() - t0:.2f}s"
+
+            log_query(
+                question=ex,
+                confidence=res["confidence"],
+                escalated=res["requires_escalation"],
+                sources_used=len(res["docs"]),
+                vector_store=VSTORE[0],
+                latency_s=float(elapsed.replace("s", "")),
+            )                
 
             conf_pct = int(res["confidence"] * 100)
             escalated = res["requires_escalation"]
