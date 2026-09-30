@@ -147,7 +147,10 @@ daily = df.groupby("date").size().reset_index(name="queries")
 st.line_chart(daily.set_index("date"))
 
 st.subheader("Confidence Distribution")
-st.bar_chart(df["confidence"].value_counts(bins=10).sort_index())
+bins = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
+labels = ["0-20%", "20-40%", "40-60%", "60-80%", "80-100%"]
+bucketed = pd.cut(df["confidence"], bins=bins, labels=labels, include_lowest=True)
+st.bar_chart(bucketed.value_counts().sort_index())
 
 st.subheader("Vector Store Used")
 st.bar_chart(df["vector_store"].value_counts())
